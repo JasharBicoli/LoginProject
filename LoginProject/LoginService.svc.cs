@@ -628,6 +628,43 @@ namespace LoginProject
                 return false;
             }
         }
+
+        public IEnumerable<InterfaceAdmin> GetAdmins()
+        {
+            List<Interface.InterfaceAdmin> returnList = new List<Interface.InterfaceAdmin>();
+
+            foreach (var dbAmin in db.Admin)
+            {
+
+               
+
+                 Interface.InterfaceAdmin returAdmin = new Interface.InterfaceAdmin();
+                 returAdmin.ID = dbAmin.ID;
+                 returAdmin.Username = dbAmin.Username;
+                 returAdmin.Email = dbAmin.Email;
+
+
+
+                    returnList.Add(returAdmin);
+
+            }
+            return returnList;
+        }
+
+        public InterfaceAdmin GetAdminByUsername(string Username)
+        {
+            Admin CheckAdminUsername = (from x in db.Admin
+                                 where x.Username == Username
+                                 select x).FirstOrDefault();
+
+            InterfaceAdmin interfaceadmin = new InterfaceAdmin();
+
+            interfaceadmin.ID = CheckAdminUsername.ID;
+            interfaceadmin.Email = CheckAdminUsername.Email;
+            interfaceadmin.Username = CheckAdminUsername.Username;
+
+            return interfaceadmin;
+        }
     }
     
 }

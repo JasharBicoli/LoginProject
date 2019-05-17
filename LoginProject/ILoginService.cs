@@ -49,6 +49,9 @@ namespace LoginProject.Interface
         IEnumerable<InterfaceUser> GetModerators();
 
         [OperationContract]
+        IEnumerable<InterfaceAdmin> GetAdmins();
+
+        [OperationContract]
         IEnumerable<InterfaceUser> GetActiveUsers();
 
         [OperationContract]
@@ -73,6 +76,8 @@ namespace LoginProject.Interface
         [OperationContract]
         bool UserIdExist(int ID);
 
+        [OperationContract]
+        InterfaceAdmin GetAdminByUsername(string Username);
 
 
         // TODO: Add your service operations here
@@ -277,7 +282,10 @@ namespace LoginProject.Interface
         [DataMember]
         public string Username { get; set; }
 
+       
+
         [DataMember]
-        public string Password { get; set; }
+        public string Email { get; set; }
+
     }
 }

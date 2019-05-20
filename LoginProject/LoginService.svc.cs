@@ -15,7 +15,7 @@ namespace LoginProject
     public class LoginService : Interface.ILoginService
     {
         AccountsEntities db = new AccountsEntities();
-        public bool AdminLogin(string Username, string Password)
+        public bool AdminLogin(string Username, string Password) //:d
         {
             bool ValidUser = false;
             ValidUser = CheckAdmin(Username, Password);

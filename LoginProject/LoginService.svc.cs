@@ -633,7 +633,7 @@ namespace LoginProject
         {
             List<Interface.InterfaceAdmin> returnList = new List<Interface.InterfaceAdmin>();
 
-            foreach (var dbAmin in db.Admin) // GÖR KLART??
+            foreach (var dbAmin in db.Admin)
             {
 
                

@@ -71,6 +71,15 @@ namespace LoginProject
                           where x.Username.ToUpper() == NewUser.Username.ToUpper()
                           select x).FirstOrDefault();
 
+            try
+            {
+
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
 
             if (EmailCheck == null & UsernameCheck == null)
             {
@@ -185,6 +194,7 @@ namespace LoginProject
             }
 
 
+
             else
             {
                 return false;
@@ -192,6 +202,8 @@ namespace LoginProject
         }
         public bool UserLogin(string Email, string Password)
         {
+        
+            
             bool ValidUser = false;
             ValidUser = CheckUser(Email, Password);
 
@@ -203,6 +215,8 @@ namespace LoginProject
             {
                 return false;
             }
+            
+            
         }
                
         public bool DeleteUser(int UserId)
@@ -665,7 +679,103 @@ namespace LoginProject
 
             return interfaceadmin;
         }
+
+        public bool CheckModerator(string Email, string Password)
+        {
+            Users User = (from x in db.Users
+                          where x.Email.ToUpper() == Email.ToUpper()
+                          select x).FirstOrDefault();
+            if (User != null)
+            {
+                int ok = 0;
+
+
+
+                if (User.StatusID != 3)
+                {
+
+                    string storedPassword = User.Password;
+                    byte[] passwordToBytes = Convert.FromBase64String(storedPassword);
+                    byte[] saltFromDatabasePassword = new byte[16];
+
+                    Array.Copy(passwordToBytes, 0, saltFromDatabasePassword, 0, 16);
+
+                    var input = new Rfc2898DeriveBytes(Password, saltFromDatabasePassword, 1000);
+
+                    byte[] hash = input.GetBytes(20);
+
+                    ok = 1;
+
+                    for (int i = 0; i < 20; i++)
+                    {
+                        if (passwordToBytes[i + 16] != hash[i])
+                        {
+                            ok = 0;
+                        }
+                    }
+
+                    if (ok == 1)
+                    {
+                        return true;
+                    }
+
+
+                    else
+                    {
+                        return false;
+                    }
+
+                }
+
+                else if (User.StatusID == 2)
+                {
+                    bool CheckedBlockedStatus;
+                    CheckedBlockedStatus = CheckBlockDate(User.ID);
+                    if (CheckedBlockedStatus == true)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+
+
+            else
+            {
+                return false;
+            }
+        }
+
+        public bool ModeratorLogin(string Email, string Password)
+        {
+            
+
+
+                bool ValidUser = false;
+                ValidUser = CheckModerator(Email, Password);
+
+                if (ValidUser == true)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+
+
+            
+        }
+    }
     }
     
-}
+
 

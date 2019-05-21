@@ -36,6 +36,12 @@ namespace LoginProject.Interface
         bool CheckUser(string Email, string Password);
 
         [OperationContract]
+        bool CheckModerator(string Email, string Password);
+
+        [OperationContract]
+        bool ModeratorLogin(string Email, string Password);
+
+        [OperationContract]
         int GetUserId(string Email);
 
 

@@ -14,12 +14,15 @@ namespace LoginProject
     // NOTE: In order to launch WCF Test Client for testing this service, please select Service1.svc or Service1.svc.cs at the Solution Explorer and start debugging.
     public class LoginService : Interface.ILoginService
     {
+// Koppling till databasen
         AccountsEntities db = new AccountsEntities();
+        
         public bool AdminLogin(string Username, string Password) //:
         {
             bool ValidUser = false;
+            // Den boolska variablens värde sätts till resultatet av en annan metod, CheckAdmin, och vi skickar med användarnamn och lösenord
             ValidUser = CheckAdmin(Username, Password);
-
+            // Om CheckAdmin-metoden returnerar true returnerar även denna metod true, annars false
             if (ValidUser == true)
             {
                 
@@ -32,17 +35,19 @@ namespace LoginProject
                 return false;
             }
         }
+        // Metoden för att kolla Admins användaruppgifter, som den föregående metoden hänvisar till
         private bool CheckAdmin(string Username, string Password)
         {
+            // Kolla om det användarnamn som matats in finns i databasen, ToUpper innebär att användarnamnet kan skrivas med små eller stora bokstäver
             Admin Admin = (from x in db.Admin
                            where x.Username.ToUpper() == Username.ToUpper()
 
                            select x).FirstOrDefault();
-
+            // Om en matching hittas i databasen
             if (Admin != null)
             {
 
-
+                // Kolla om lösenordet överensstämmer med det specifika kontot
                 if (Admin.Password == Password)
                 {
                     return true;
@@ -53,16 +58,17 @@ namespace LoginProject
                 }
 
             }
-
+            // Om användarnamnet inte kan hittas
             else
             {
                 return false;
             }
         }
 
-
+// Metod för att skapa ny användare, tar ett användarobjekt som inparameter och returnerar ett nytt objekt med användarens uppgifter
         public ReturnUser CreateUser(NewUser NewUser) 
         {
+// Kolla i databasen om E-mail och användarnamn redan finns, om inte, gå vidare och skapa användaren
             Users EmailCheck = (from x in db.Users
                           where x.Email.ToUpper() == NewUser.Email.ToUpper()
                           select x).FirstOrDefault();
@@ -83,6 +89,7 @@ namespace LoginProject
 
             if (EmailCheck == null & UsernameCheck == null)
             {
+// Hashing av lösenord med tillhörande salt
                 byte[] salt;
 
                 new RNGCryptoServiceProvider().GetBytes(salt = new byte[16]);
@@ -96,13 +103,14 @@ namespace LoginProject
                 Array.Copy(salt, 0, total, 0, 16);
                 Array.Copy(passwordHash, 0, total, 16, 20);
                 string savedPassword = Convert.ToBase64String(total);
-
+                // Nytt användarobjekt
                 ReturnUser returUser = new ReturnUser();
+                // Det nya objektet tilldelas värdena från användarens inmatade uppgifter
                 returUser.Email = NewUser.Email;
                 returUser.Username = NewUser.Username;
                 returUser.Firstname = NewUser.Firstname;
                 returUser.Surname = NewUser.Surname;
-
+                // Nytt objekt med alla uppgifter
                 Users CompleteUser = new Users();
 
                 CompleteUser.Email = NewUser.Email;
@@ -111,15 +119,17 @@ namespace LoginProject
                 CompleteUser.Username = NewUser.Username;
 
                 CompleteUser.Password = savedPassword;
+                // Status-Id blir automatiskt 1, som innebär aktiv
                 CompleteUser.StatusID = 1;
+                // Role-Id 3 innebär vanlig användare
                 CompleteUser.RoleID = 3;
-                
+                // Det nya användarobjektet läggs till i databasen
                 db.Users.Add(CompleteUser);
                 db.SaveChanges();
                 returUser.ID = CompleteUser.ID;
                 return returUser;
             }
-
+            // Om E-mail och användarnamn redan finns i databasen
             else
             {
                 return null;

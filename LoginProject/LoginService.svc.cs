@@ -86,7 +86,7 @@ namespace LoginProject
 
                 throw;
             }
-
+// Om inget E-mail eller användarnamn kan hittas
             if (EmailCheck == null & UsernameCheck == null)
             {
 // Hashing av lösenord med tillhörande salt
@@ -103,21 +103,24 @@ namespace LoginProject
                 Array.Copy(salt, 0, total, 0, 16);
                 Array.Copy(passwordHash, 0, total, 16, 20);
                 string savedPassword = Convert.ToBase64String(total);
-                // Nytt användarobjekt
+                /*
+                 Här skapas ett nytt användarobjekt som används av resterande servicar.
+                 Eftersom endast vår service skall hantera lösenord behöver vill vi inte skicka med lösenord till andra, varför detta objekt skapas.
+                 */
                 ReturnUser returUser = new ReturnUser();
                 // Det nya objektet tilldelas värdena från användarens inmatade uppgifter
                 returUser.Email = NewUser.Email;
                 returUser.Username = NewUser.Username;
                 returUser.Firstname = NewUser.Firstname;
                 returUser.Surname = NewUser.Surname;
-                // Nytt objekt med alla uppgifter
+                // Nytt objekt som sparas i databasen, innehållande samtliga användaruppgifter
                 Users CompleteUser = new Users();
 
                 CompleteUser.Email = NewUser.Email;
                 CompleteUser.Firstname = NewUser.Firstname;
                 CompleteUser.Surname = NewUser.Surname;
                 CompleteUser.Username = NewUser.Username;
-
+                // Lösenordet får värdet av det tidigare hashade lösenordet, eftersom det är detta som skall sparas i databasen
                 CompleteUser.Password = savedPassword;
                 // Status-Id blir automatiskt 1, som innebär aktiv
                 CompleteUser.StatusID = 1;
@@ -126,6 +129,7 @@ namespace LoginProject
                 // Det nya användarobjektet läggs till i databasen
                 db.Users.Add(CompleteUser);
                 db.SaveChanges();
+                // Säkerställ att det användar-id vi har överensstämmer med andra servicars Id, vilket minimerar risken för att olika användare visas upp
                 returUser.ID = CompleteUser.ID;
                 return returUser;
             }
@@ -140,17 +144,19 @@ namespace LoginProject
 
         public bool CheckUser(string Email, string Password)
         {
+// Kolla om användaruppgifterna finns i databasen
             Users User = (from x in db.Users
                           where x.Email.ToUpper() == Email.ToUpper()
                           select x).FirstOrDefault();
+// Om användare finns
             if (User != null)
             {
             int ok = 0;
 
                
-
+                // Om användaren inte är blockad
                 if (User.StatusID!=3) {
-
+                    // Lösenordet dekrypteras
                     string storedPassword = User.Password;
                     byte[] passwordToBytes = Convert.FromBase64String(storedPassword);
                     byte[] saltFromDatabasePassword = new byte[16];
@@ -165,6 +171,7 @@ namespace LoginProject
 
                     for (int i = 0; i < 20; i++)
                     {
+// Om något skiljer sig i de olika arrayerna med salt och lösenord, blir ok-variabeln 0 vilket motsvarar false
                         if (passwordToBytes[i + 16] != hash[i])
                         {
                             ok = 0;
@@ -183,10 +190,14 @@ namespace LoginProject
                     }
                     
                 }
-
+                // Om användaren är blockad
                 else if (User.StatusID == 3)
                 {
                     bool CheckedBlockedStatus;
+/*
+ Den boolska variabeln tilldelas värdet av en annan metod som kollar dagens datum samt det datum som användaren blockades.
+ Id:t som skickas med ser till att rätt användare kollas.
+ */
                     CheckedBlockedStatus =  CheckBlockDate(User.ID);
                     if (CheckedBlockedStatus == true)
                     {
@@ -210,11 +221,13 @@ namespace LoginProject
                 return false;
             }
         }
+        // Metod för att logga in
         public bool UserLogin(string Email, string Password)
         {
         
-            
+            // Boolsk variabel för att kolla om användaren är verifierad
             bool ValidUser = false;
+// ValidUser får värdet av checkUser-metoden och här skickar vi med E-mail och lösenord
             ValidUser = CheckUser(Email, Password);
 
             if (ValidUser == true)
@@ -228,51 +241,71 @@ namespace LoginProject
             
             
         }
-               
+               // Metod för att radera användare
         public bool DeleteUser(int UserId)
         {
+            // Hitta rätt användare i databasen
             Users FoundUser = (from x in db.Users
                                where x.ID == UserId
                                select x).FirstOrDefault();
-
+            // Om en användare hittas
             if (FoundUser != null)
             {
+                // Ta bort användaren och spara ändringarna i databasen
                 db.Users.Remove(FoundUser);
                 db.SaveChanges();
                 return true;
 
             }
+// Om användaren inte finns
             else
             {
                 return false;
             }
         }
 
+/*
+ Metod för att flagga en användare.
+ Här skickar vi med ID:t av den som flaggat, den användare som ska flaggas samt orsaken till varför användaren ska flaggas.
+ */
         public bool FlagUser(int FlaggedByUserId, string Reason, int FlaggedUserId) 
         {
 
 
-           
+// Välj användaren från databasen           
             var user = db.Users.Where(x => x.ID == FlaggedUserId).FirstOrDefault();
-            if(user.StatusID!=2) //status id =2 is a flagged user.
+            // Om användaren inte redan är flaggad
+            if (user.StatusID!=2)
             {
                 FlaggedUsers flaggedUser = new FlaggedUsers();
+                // Användaren tilldelas status-Id 2, vilket innebär att användaren blir flaggad
                 user.StatusID = 2;
+// Det nya objektet tilldelas Id-värdet av den användare som har gjort flaggningen
                 flaggedUser.FlaggedBy = FlaggedByUserId;
+// Objektet får värdet av orsaks-strängen vi skickade in i denna metod
                 flaggedUser.Reason = Reason;
+// ID:t på den flaggade användaren
                 flaggedUser.UserID = FlaggedUserId;
 
+// Det nya objektet sparas i databasen
                 db.FlaggedUsers.Add(flaggedUser);
 
                 db.SaveChanges();
                 return true;
             }
+            // Om användaren redan är flaggad
             else
             {
                 return false;
             }
         }
-
+        /*
+         Metod för att blocka en användare.
+         Inparametrarna är:
+         * ID:t på den användare som ska blockas
+         * ID:t på den admin som blockar användaren
+         * Orsaken till blockningen
+         * 
         public bool BlockUser(int Id, int AdminId, string reason, DateTime dateTo) 
         {
 

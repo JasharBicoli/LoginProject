@@ -305,24 +305,30 @@ namespace LoginProject
          * ID:t på den användare som ska blockas
          * ID:t på den admin som blockar användaren
          * Orsaken till blockningen
-         * 
+         * Dagens datum
+         * Datumet till vilket användaren är blockad
         public bool BlockUser(int Id, int AdminId, string reason, DateTime dateTo) 
         {
 
-
+    // Hitta rätt användare i databasen
             var user = db.Users.Where(x => x.ID == Id).FirstOrDefault();
-
+            // Nytt objekt för den blockade användaren
             BlockedUsers blocked = new BlockedUsers();
  
-            var toDate = dateTo.Date; //convert Date and Time to date only.(date-to)
+    // Konvertera värdet av variablen DateTo så att den endast visar datum
+    var toDate = dateTo.Date;
 
-            var dateandtime = DateTime.Now; //convert Date and Time to date only. (date-from)
-            var date = dateandtime.Date;
+    // Variabel för dagens datum och tid
+    var dateandtime = DateTime.Now;
+    // Konvertera dagens datum och tid till endast datum
+    var date = dateandtime.Date;
 
-            if (user.StatusID != 3) // status id = 3 is a blocked user.
+    // Om användare inte redan är blockad
+    if (user.StatusID != 3)
             {
-                user.StatusID = 3;
-
+            // Användaren tilldelas status-id 3, vilket innebär blockad
+    user.StatusID = 3;
+    // Det nya objektet, som sparas i databasen, ´tilldelas värdena av användaruppgifterna
 
                 blocked.UserID = Id;    
                 
@@ -330,62 +336,75 @@ namespace LoginProject
                 blocked.Reason = reason;
                 blocked.DateFrom = date;
                 blocked.DateTo = toDate;
-
+                // Objektet läggs till i databasen
                 db.BlockedUsers.Add(blocked);
                 db.SaveChanges();
 
                 return true;
             }
-            else
+            // Om användaren redan är blockad
+    else
             {
                 return false;
             }
         }
 
-        public bool AssignModeratorRole(int ID) 
+    // Metod för att lägga till moderatorsbehörigheter, tar Id:t på den specifika användaren som inparameter
+    public bool AssignModeratorRole(int ID) 
         {
-
+// Hitta användaren i databasen
             var user = db.Users.Where(x => x.ID == ID).FirstOrDefault();
-            if (user.RoleID == 3) // role-id=3 is user.
+            // Om användaren har rollen som vanlig användare, gå vidare och ändra till moderator
+    if (user.RoleID == 3)
             {
-                user.RoleID = 2;
+            // Användaren får roll-id 2, vilket innebär moderator
+    user.RoleID = 2;
 
                 db.SaveChanges();
                 return true;
             }
-            
+// Om användaren redan har roll-id 2 (roll-id 1 har endast admin)            
             else
             {
                 return false;
             }
         }
-
+// Metod för att ta bort moderatorsbehörigheter, tar Id:t på den specifika användaren som inparameter
         public bool AssignUserRole(int ID)
         {
-
+        // Hitta användaren i databasen
             var user = db.Users.Where(x => x.ID == ID).FirstOrDefault();
-            
-            if (user.RoleID == 2) //role-id=2 is moderator
+// Om användaren har moderatorsbehörigheter            
+            if (user.RoleID == 2)
             {
-                user.RoleID = 3;
+            // Tilldela användarenroll-Id 3, vilket innebär vanlig användare
+    user.RoleID = 3;
+    // Spara i databasen
 
                 db.SaveChanges();
                 return true;
 
             }
-            else
+            // Om en användare redan är vanlig
+    else
             {
                 return false;
             }
         }
-
+        /*
+         I vyerna för flaggade och blockade användare vill vi bland annat kunna visa upp namnet på den som flaggat eller blockat en användare.
+         Vi har visserligen ID:t på dessa personer som foreign key i blocked respektive flaggeduser-tabellerna, men vi kan inte använda oss av detta Id för att visa upp ett namn när vi kommunicerar med en klient (hade vi varit i ett lokalt projekt hade det funkat).
+         Vi behöver alltså skicka med ett helt objekt till klienten och därför skapar vi här ett "fejk-objekt", vilket funkar som mellanhand mellan service och klient.
+         Vi skickar således detta fejk-objekt till klienten, vilket innehåller alla uppgifter.
+         Vi skickar alltså separata objekt för blockade och flaggade användare samt för den användare som flaggat respektive blockat.
+         */
         IEnumerable<Interface.InterfaceFlaggedUser> ILoginService.GetFlaggedUsers() // ID 2 is a FLAGGED user.
         {
           
 
             List<Interface.InterfaceFlaggedUser> returnList = new List<Interface.InterfaceFlaggedUser>();
             
-
+// Loopa igenom uppgifterna om flaggade användare
             foreach (var dbUser in db.FlaggedUsers)
             {
                 Interface.InterfaceUser returUser = new Interface.InterfaceUser();
@@ -393,12 +412,12 @@ namespace LoginProject
 
 
                 InterfaceFlaggedUser interfaceflaggeduser = new InterfaceFlaggedUser();
-
+// Det nya objektet får sina värden
                 interfaceflaggeduser.ID = dbUser.ID;
                 interfaceflaggeduser.Reason = dbUser.Reason;
                 interfaceflaggeduser.FlaggedByUserId = dbUser.FlaggedBy;
                 interfaceflaggeduser.WhoIsFlaggedID = dbUser.UserID;
-
+                // Objekt för vem som är flaggad
                 Users user = (from x in db.Users
                              where x.ID == interfaceflaggeduser.WhoIsFlaggedID
                              select x).FirstOrDefault();
@@ -410,18 +429,19 @@ namespace LoginProject
                 returUser.Firstname = user.Firstname;
                 returUser.Surname = user.Surname;
                 returUser.ID = user.ID;
-
+// WhoIsFlagged tilldelas värdena av returuser och vi kan sedan använda attributet WhoIsFlagged för att kommunicera med klienten
                 interfaceflaggeduser.WhoIsFlagged = returUser;
 
                 Users FlaggedBy = (from x in db.Users
                                    where x.ID == interfaceflaggeduser.FlaggedByUserId
                                    select x).FirstOrDefault();
-
+// Objektet flagger får sina värden
                 Flagger.Email = FlaggedBy.Email;
                 Flagger.Firstname = FlaggedBy.Firstname;
                 Flagger.Surname = FlaggedBy.Surname;
                 Flagger.Username = FlaggedBy.Username;
 
+// FlaggedBy får värde
                 interfaceflaggeduser.FlaggedBy = Flagger;
 
                 returnList.Add(interfaceflaggeduser);

@@ -14,6 +14,8 @@ namespace LoginProject.Interface
     public interface ILoginService
     {
 
+        [OperationContract]
+        bool IsAlive();
 
         [OperationContract]
         ReturnUser CreateUser(NewUser NewUser);
@@ -44,7 +46,8 @@ namespace LoginProject.Interface
         [OperationContract]
         int GetUserId(string Email);
 
-
+        [OperationContract]
+        bool UpdateAccountInfo(ReturnUser UpdatedAccountInfo);
 
         [OperationContract]
         IEnumerable<InterfaceFlaggedUser> GetFlaggedUsers();
@@ -85,7 +88,8 @@ namespace LoginProject.Interface
         [OperationContract]
         InterfaceAdmin GetAdminByUsername(string Username);
 
-
+        [OperationContract]
+        InterfaceAdmin GetAdminById(int Id);
         // TODO: Add your service operations here
     }
 
@@ -287,8 +291,6 @@ namespace LoginProject.Interface
 
         [DataMember]
         public string Username { get; set; }
-
-       
 
         [DataMember]
         public string Email { get; set; }

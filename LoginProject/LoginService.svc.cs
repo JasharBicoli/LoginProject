@@ -680,6 +680,21 @@ namespace LoginProject
             return interfaceadmin;
         }
 
+        public InterfaceAdmin GetAdminById(int Id)
+        {
+            Admin CheckAdminId = (from x in db.Admin
+                                        where x.ID == Id
+                                        select x).FirstOrDefault();
+
+            InterfaceAdmin interfaceadmin = new InterfaceAdmin();
+
+            interfaceadmin.ID = CheckAdminId.ID;
+            interfaceadmin.Email = CheckAdminId.Email;
+            interfaceadmin.Username = CheckAdminId.Username;
+
+            return interfaceadmin;
+        }
+
         public bool CheckModerator(string Email, string Password)
         {
             Users User = (from x in db.Users
@@ -773,6 +788,47 @@ namespace LoginProject
 
 
             
+        }
+
+        public bool IsAlive()
+        {
+            return true;
+        }
+
+        public bool UpdateAccountInfo(ReturnUser UpdatedAccountInfo)
+        {   
+            var user = db.Users.Where(x => x.ID == UpdatedAccountInfo.ID).FirstOrDefault();
+
+            Users userUsername = (from x in db.Users
+                                  where x.Username == UpdatedAccountInfo.Username
+                                  select x).FirstOrDefault();
+
+            if (user != null)
+            {
+                if (userUsername == null)
+                {
+
+                 user.Email = UpdatedAccountInfo.Email;
+                 user.Username = UpdatedAccountInfo.Username;
+                 user.Firstname = UpdatedAccountInfo.Firstname;
+                 user.Surname = UpdatedAccountInfo.Surname;
+
+                    db.SaveChanges();
+                    return true;
+                }
+                else
+                {
+                        
+                return false;
+                }
+            }
+            
+
+            else
+            {
+                return false;
+            }
+
         }
     }
     }

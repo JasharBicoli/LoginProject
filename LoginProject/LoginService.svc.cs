@@ -441,16 +441,16 @@ namespace LoginProject
                 Flagger.Surname = FlaggedBy.Surname;
                 Flagger.Username = FlaggedBy.Username;
 
-// FlaggedBy får värde
+// Attributet Flaggedby får värdet av objektet Flagger, vi använder oss sedan av FlaggedBy-attributet i kommunikationen med klienten
                 interfaceflaggeduser.FlaggedBy = Flagger;
-
+// Hela FlaggedUser-objektet, inklusive FlaggedBy med de nya värdena, läggs till i listan som sedan returneras
                 returnList.Add(interfaceflaggeduser);
 
            
             }
                     return returnList;
         }
-
+// Objekt för blockade användare, beter sig på samma sätt som ovan
         IEnumerable<Interface.InterfaceBlockedUser> ILoginService.GetBlockedUsers()
         {
             List<Interface.InterfaceBlockedUser> returnList = new List<Interface.InterfaceBlockedUser>();
@@ -498,67 +498,89 @@ namespace LoginProject
             return returnList;
         }
 
-
+        /*
+         Denna metod kollar om en blockering skall låsas upp, utifrån dagens datum samt det datum vid vilket användaren blockades.
+         Metoden tar Id:t från den specifika användaren som inparameter.
+         */
         private bool CheckBlockDate(int BlockedId)
         {
+// Hitta användaren i BlockedUser-tabellen
             BlockedUsers BlockedUser = (from x in db.BlockedUsers
                                         where x.UserID == BlockedId
                                select x).FirstOrDefault();
-
+// Om en användare hittas
             if (BlockedUser != null)
             {
+// Om dagens datum är längre fram i tiden än det datum som blockeringen skall tas bort
                 if (DateTime.Now > BlockedUser.DateTo)
                 {
+/*
+ Användaren finns nu både i User-tabellen coh i BlockedUser-tabellen.
+ I User-tabellen vill vi kunna ändra status-Id på användaren från 3 (blockad) till 1 (aktiv).
+ Därför plockar vi nu även ut användaren från User-tabellen.
+ */
                     var user = db.Users.Where(x => x.ID == BlockedId).FirstOrDefault();
+// Här ändras Status-Id:t
                     user.StatusID = 1;
-
+// Den blockade användaren tas bort ur BlockedUser-tabellen och finns nu således bara kvar i User-tabellen
                     db.BlockedUsers.Remove(BlockedUser);
-
+// Ändringarna sparas i databasen
                     db.SaveChanges();
                     return true;
                 }
-
+// Om dagens datum inte är längre fram i tiden än det datum till vilket användaren ska vara blockad
                 else
                 {
                     return false;
                 }
             }
-
+// Om en användare inte hittas i BlockedUser-tabellen
             else
             {
                 return false;
             }
         }
-
+        /*
+         Här är metoden för att visa alla moderatorer.
+         I denna lista vill vi kunna se moderatorns status (aktiv eller blockad).
+Vi har angett dessa statusar med ett Id i form av en siffra, men i listan vill vi ju i stället kunna visa upp ett status-namn, alltså i text-form.
+Dessa namn finns i en separat Status-tabell, för vilken vi har en foreign key från Users-tabellen.
+När vi ska kommunicera mellan service och klient kan vi emellertid inte använda oss av denna nyckel, varför vi skapar ett separat "fejk-objekt", vilket funkar som mellanhand mellan service och klient.
+Detta objekt tilldelas värdena från så väl Users som Status-tabellen och detta samlade objekt kan vi sedan använda för att visa upp allt vi vill i klienten.
+*/
         IEnumerable<Interface.InterfaceUser> ILoginService.GetModerators()
         {
             List<Interface.InterfaceUser> returnList = new List<Interface.InterfaceUser>();
-
+// Loopa igenom uppgifterna i Users-tabellen
             foreach (var dbUser in db.Users)
             {
 
+// Om användarna är moderatorer
                 if (dbUser.RoleID == 2)
                 {
-
+// Nytt User-objekt som tilldelas värden från Users-tabellen                    
                     Interface.InterfaceUser returUser = new Interface.InterfaceUser();
                     returUser.ID = dbUser.ID;
                     returUser.StatusID = dbUser.StatusID;
                     returUser.Email = dbUser.Email;
                     returUser.RoleID = dbUser.RoleID;
                     returUser.Username = dbUser.Username;
-
+// Hitta rätt användare i Status-tabellen, där även namnet på statusen finns
                     Status status = (from x in db.Status
                                      where x.ID == returUser.StatusID
                                      select x).FirstOrDefault();
-
+// Nytt Status-objekt med uppgifter från Status-tabellen
                     InterfaceStatus interfacestatus = new InterfaceStatus();
 
                     interfacestatus.ID = status.ID;
                     interfacestatus.StatusName = status.StatusName;
-
+/*
+ Här tilldelas attributet Status i returuser-objektet värdet av det nya InterfaceStatus-objektet.
+Således finns så väl användaruppgifter som statusnamn nu i returuser-bojektet, vilket är det objekt vi sedan använder oss av i kommunikation med klienten.
+*/
                     returUser.Status = interfacestatus;
 
-
+// Lägg till objektet i listan och returnera denna
                     returnList.Add(returUser);
 
                 }
@@ -566,7 +588,7 @@ namespace LoginProject
             }
             return returnList;
         }
-
+// Metod för att visa alla aktiva användare, beter sig på samma sätt som metoden ovan
         IEnumerable<Interface.InterfaceUser> ILoginService.GetActiveUsers()
         {
             List<Interface.InterfaceUser> returnList = new List<Interface.InterfaceUser>();
@@ -618,160 +640,186 @@ namespace LoginProject
             }
             return returnList;
         }
-
+// Metod för att hitta ett User-Id via användarens E-mail, tar således mailadressen som inparameter        
         public int GetUserId(string Email)
         {
+// Välj användaren i databasen utifrån dennes mailadress, ToUpper innebär att adressen kan skrivas med så väl små som stora bokstäver
             Users User = (from x in db.Users
                           where x.Email.ToUpper() == Email.ToUpper()
                           select x).FirstOrDefault();
-
+// Id-variabel deklareras och tilldelas värdet av användarens Id från User-tabellen
             int id = User.ID;
 
-
+// Id:t returneras
             return id;
         }
 
-        
 
+
+        // Metod för att ta bort en användares flaggning, tar den specifika anvädnarens Id som inparameter
         public bool UnflagUser(int UserId )
         {
-                FlaggedUsers removeflaggeduser = (from x in db.FlaggedUsers
+            // Hitta rätt användare i FlaggedUser-tabellen
+            FlaggedUsers removeflaggeduser = (from x in db.FlaggedUsers
                                                   where x.ID== UserId
                                                   select x).FirstOrDefault();
 
+// För att även kunna ändra Status-Id på användaren, vilket endast finns i Users-tabellen, plockar vi här även ut användaren från Users-tabellen
 
             var user = db.Users.Where(x => x.ID == removeflaggeduser.UserID).FirstOrDefault();
-            if (user.StatusID == 2) //status id =2 is a flagged user.
+            // Om användaren är flaggad
+            if (user.StatusID == 2)
             {
+// Tilldela användaren Status-Id 1, vilket innebär aktiv
                 user.StatusID = 1;
+                // Ta bort anvädnaren från FlaggedUser-tabellen och spara ändringarna i databasen
                 db.FlaggedUsers.Remove(removeflaggeduser);
 
                 db.SaveChanges();
                 return true;
             }
+// Om anvädnaren inte är flaggad
             else
             {
                 return false;
             }
         }
-
+// Metod för att kolla om en användarens mailadress redan finns i databasen, tar således mailadressen som inparameter
         public bool EmailExist(string Email)
         {
+// Plockar ur den anvädnare ur databasen där mailadressen är samma som den som skickades in till metoden
             Users checkEmail = (from x in db.Users
                                 where x.Email.ToUpper() == Email.ToUpper()
                                 select x).FirstOrDefault();
 
+// Om en mailadress hittas
             if (checkEmail != null)
             {
                 return true;
             }
-
+// Om en mailadress inte hittas
             else
             {
                 return false;
             }
         }
-
+// Metod för att kolla om ett visst användarnamn redan finns i databasen, tar således användarnamnet som inparameter
         public bool UsernameExist(string Username)
         {
+// Plockar ut en användare ur databasen utifrån det inskickade användarnamnet
             Users checkUsername = (from x in db.Users
                                 where x.Username == Username
                                 select x).FirstOrDefault();
-
+// Om ett användarnamn hittas
             if (checkUsername != null)
             {
                 return true;
             }
-
+            // Om ett användarnamn inte hittas
             else
             {
                 return false;
             }
         }
-
+// Metod för att kolla om ett visst användar-Id finns i databasen, tar såleds Id:t som inparameter
         public bool UserIdExist(int ID)
         {
+// Plocka ut en anvädnare ur databasen utifrån det inskickade Id:t
             Users checkUserId = (from x in db.Users
                                 where x.ID == ID
                                 select x).FirstOrDefault();
 
+// Om ett Id hittas
             if (checkUserId != null)
             {
                 return true;
             }
-
+// Om ett Id inte hittas
             else
             {
                 return false;
             }
         }
-
+// Metod för att visa uppgifterna om alla admins
         public IEnumerable<InterfaceAdmin> GetAdmins()
         {
-            List<Interface.InterfaceAdmin> returnList = new List<Interface.InterfaceAdmin>();
+// Lista som ska innehålla objekt för de olika administratörerna            
+/            List<Interface.InterfaceAdmin> returnList = new List<Interface.InterfaceAdmin>();
 
+// Loopa igenom alla admins i databasen
             foreach (var dbAmin in db.Admin)
             {
 
-               
 
-                 Interface.InterfaceAdmin returAdmin = new Interface.InterfaceAdmin();
+
+                // Admin-objekt
+// Admin-objektet tilldelas värden afrån en admin i databasen                Interface.InterfaceAdmin returAdmin = new Interface.InterfaceAdmin();
                  returAdmin.ID = dbAmin.ID;
                  returAdmin.Username = dbAmin.Username;
                  returAdmin.Email = dbAmin.Email;
 
 
-
+/*
+ Admin-objektet läggs till i listan av objekt som deklarerades ovan.
+ Eftersom detta sker i en loop läggs alltså ett separat objekt för varje admin till i listan (om det finns fler än en förstås).
+ */
                     returnList.Add(returAdmin);
 
             }
+// Listan av admin-objekt returneras
             return returnList;
         }
 
+// Metod för att plocka ut en specifik admin utifrån ett användarnamn, tar således användarnamn som inparameter
         public InterfaceAdmin GetAdminByUsername(string Username)
         {
+// Plocka ut en admin ur databasen utifrån det inskickade användarnamnet
             Admin CheckAdminUsername = (from x in db.Admin
                                  where x.Username == Username
                                  select x).FirstOrDefault();
-
+// Nytt objekt innehållandes uppgifter från den specifika administratören
             InterfaceAdmin interfaceadmin = new InterfaceAdmin();
 
             interfaceadmin.ID = CheckAdminUsername.ID;
             interfaceadmin.Email = CheckAdminUsername.Email;
             interfaceadmin.Username = CheckAdminUsername.Username;
-
+// Admin-objektet med alla uppgifter returneras
             return interfaceadmin;
         }
-
+// Metod för att hitta en specifik admin utifrån ett Id, tar således Id:t som inparameter
         public InterfaceAdmin GetAdminById(int Id)
         {
+// Plocka ut en admin ur databasen utifrån det inskickade Id:t
             Admin CheckAdminId = (from x in db.Admin
                                         where x.ID == Id
                                         select x).FirstOrDefault();
-
+// Nytt Admin-objekt innehållandes uppgifter från den specifika administratören
             InterfaceAdmin interfaceadmin = new InterfaceAdmin();
 
             interfaceadmin.ID = CheckAdminId.ID;
             interfaceadmin.Email = CheckAdminId.Email;
             interfaceadmin.Username = CheckAdminId.Username;
-
+// Admin-objektet returneras
             return interfaceadmin;
         }
-
+// Metod för att kolla om en användare är moderator, tar E-mail och lösenord som inparameter
         public bool CheckModerator(string Email, string Password)
         {
+            // Plocka ut användaren med den specifika mailadressen ur databasen, ToUpper innebär att adressen kan skrivas med både små coh stora bokstäver
             Users User = (from x in db.Users
                           where x.Email.ToUpper() == Email.ToUpper()
                           select x).FirstOrDefault();
+// Om en användare hittas
             if (User != null)
             {
+                // En variabel deklareras som används som true eller false, där 0 är false och 1 är true
                 int ok = 0;
 
 
-
+// Om en användare inte är blockad
                 if (User.StatusID != 3)
                 {
-
+                    // Dekryptering av lösenordet
                     string storedPassword = User.Password;
                     byte[] passwordToBytes = Convert.FromBase64String(storedPassword);
                     byte[] saltFromDatabasePassword = new byte[16];
@@ -786,6 +834,7 @@ namespace LoginProject
 
                     for (int i = 0; i < 20; i++)
                     {
+                        // Om det finns någon skillnad mellan de två arrayerna med lösenord respektive salt och den slutliga arrayen med både lösenord och salt
                         if (passwordToBytes[i + 16] != hash[i])
                         {
                             ok = 0;
@@ -802,11 +851,13 @@ namespace LoginProject
                     {
                         return false;
                     }
-
+                        
                 }
 
+                // Om användaren är flaggad
                 else if (User.StatusID == 2)
                 {
+                   // Här kollas dagens datum i förhållande till det datum användaren ska vara blockad till, värdet av den boolska variabeln sätts alltså till värdet av metoden för datumkollen
                     bool CheckedBlockedStatus;
                     CheckedBlockedStatus = CheckBlockDate(User.ID);
                     if (CheckedBlockedStatus == true)
@@ -818,6 +869,7 @@ namespace LoginProject
                         return false;
                     }
                 }
+                // Om Status-Id är något annat än 2 eller 3
                 else
                 {
                     return false;
@@ -825,21 +877,23 @@ namespace LoginProject
             }
 
 
-
+// Om en användare inte hittas
             else
             {
                 return false;
             }
         }
 
+        // Metod för att logga in moderatorer, tar mailadress och lösenord som inparameter
         public bool ModeratorLogin(string Email, string Password)
         {
             
 
-
+            // Variabel för verifierad användare
                 bool ValidUser = false;
-                ValidUser = CheckModerator(Email, Password);
-
+            // ValidUser tilldelas värdet av resultatet från metoden ovan, vilken kollar om användaren är moderator
+            ValidUser = CheckModerator(Email, Password);
+// Om ValidUser blir True, returnerar även denna metod True
                 if (ValidUser == true)
                 {
                     return true;
@@ -852,25 +906,28 @@ namespace LoginProject
 
             
         }
-
+// Denna metod kollar om webservicen fungerar
         public bool IsAlive()
         {
             return true;
         }
-
+// Metod för att uppdatera kontoinformation, tar emot ett objekt av en användare
         public bool UpdateAccountInfo(ReturnUser UpdatedAccountInfo)
-        {   
+        {
+            // Hitta rätt användare i databasen
             var user = db.Users.Where(x => x.ID == UpdatedAccountInfo.ID).FirstOrDefault();
 
+            // Kolla om användarnamnet redan finns i databasen, man ska inte kunna byta till ett användarnamn som redan finns
             Users userUsername = (from x in db.Users
                                   where x.Username == UpdatedAccountInfo.Username
                                   select x).FirstOrDefault();
-
+// Om en användare hittas
             if (user != null)
             {
+                // Om användarnamnet inte är upptaget
                 if (userUsername == null)
                 {
-
+// Användarobjektet får värdena av det objekt vi skickade in i metoden, alltså den uppdaterade kontoinformationen
                  user.Email = UpdatedAccountInfo.Email;
                  user.Username = UpdatedAccountInfo.Username;
                  user.Firstname = UpdatedAccountInfo.Firstname;
@@ -879,6 +936,7 @@ namespace LoginProject
                     db.SaveChanges();
                     return true;
                 }
+                // Om användarnamnet är upptaget
                 else
                 {
                         

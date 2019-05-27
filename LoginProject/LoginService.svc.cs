@@ -7,6 +7,8 @@ using System.ServiceModel;
 using System.ServiceModel.Web;
 using System.Text;
 using LoginProject.Interface;
+using Newtonsoft.Json;
+using Serilog;
 
 namespace LoginProject
 {
@@ -19,6 +21,18 @@ namespace LoginProject
         
         public bool AdminLogin(string Username, string Password) //:
         {
+
+            var LoggUser = new Admin
+            {
+                Username = Username,
+                
+                Password = Password,
+
+
+            };
+            var jsonPerson = JsonConvert.SerializeObject(LoggUser);
+            Log.Information(jsonPerson);
+
             bool ValidUser = false;
             // Den boolska variablens värde sätts till resultatet av en annan metod, CheckAdmin, och vi skickar med användarnamn och lösenord
             ValidUser = CheckAdmin(Username, Password);
@@ -77,15 +91,19 @@ namespace LoginProject
                           where x.Username.ToUpper() == NewUser.Username.ToUpper()
                           select x).FirstOrDefault();
 
-            try
-            {
+                var LoggUser = new Users // Dettta är loggning av objektet NewUser. 
+                {
+                    Email = NewUser.Email,
+                    Username = NewUser.Username,
+                    Firstname = NewUser.Firstname,
+                    Surname = NewUser.Surname,
+                    Password = NewUser.Password,
 
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
+                    
+                };
+                var jsonPerson = JsonConvert.SerializeObject(LoggUser);
+                Log.Information(jsonPerson);
+            
 // Om inget E-mail eller användarnamn kan hittas
             if (EmailCheck == null & UsernameCheck == null)
             {
@@ -224,7 +242,18 @@ namespace LoginProject
         // Metod för att logga in
         public bool UserLogin(string Email, string Password)
         {
-        
+
+            var LoggUser = new Users
+            {
+                Email = Email,
+                
+                Password = Password,
+
+
+            };
+            var jsonPerson = JsonConvert.SerializeObject(LoggUser);
+            Log.Information(jsonPerson);
+
             // Boolsk variabel för att kolla om användaren är verifierad
             bool ValidUser = false;
 // ValidUser får värdet av checkUser-metoden och här skickar vi med E-mail och lösenord
@@ -306,6 +335,7 @@ namespace LoginProject
          * ID:t på den admin som blockar användaren
          * Orsaken till blockningen
          * 
+         * */
         public bool BlockUser(int Id, int AdminId, string reason, DateTime dateTo) 
         {
 
@@ -615,7 +645,16 @@ namespace LoginProject
 
         public bool UnflagUser(int UserId )
         {
-                FlaggedUsers removeflaggeduser = (from x in db.FlaggedUsers
+
+            var LoggUser = new Users
+            {
+                ID = UserId
+
+
+            };
+            var jsonPerson = JsonConvert.SerializeObject(LoggUser);
+            Log.Information(jsonPerson);
+            FlaggedUsers removeflaggeduser = (from x in db.FlaggedUsers
                                                   where x.ID== UserId
                                                   select x).FirstOrDefault();
 
@@ -814,10 +853,20 @@ namespace LoginProject
 
         public bool ModeratorLogin(string Email, string Password)
         {
-            
+
+            var LoggUser = new Users
+            {
+                Email = Email,
+                
+                Password = Password,
 
 
-                bool ValidUser = false;
+            };
+            var jsonPerson = JsonConvert.SerializeObject(LoggUser);
+            Log.Information(jsonPerson);
+
+
+            bool ValidUser = false;
                 ValidUser = CheckModerator(Email, Password);
 
                 if (ValidUser == true)
@@ -872,6 +921,28 @@ namespace LoginProject
                 return false;
             }
 
+        }
+
+        public int CountActiveUsers()
+        {
+
+            int rows = db.Users.Where(x => x.StatusID != 3).Count();
+
+            return rows;
+        }
+
+        public int CountFlaggedUsers()
+        {
+            int rows = db.FlaggedUsers.Count();
+
+            return rows;
+        }
+
+        public int CountBlockedUsers()
+        {
+            int rows = db.BlockedUsers.Count();
+
+            return rows;
         }
     }
     }

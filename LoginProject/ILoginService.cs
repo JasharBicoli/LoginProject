@@ -128,6 +128,7 @@ namespace LoginProject.Interface
         [DataMember]
         public string Username { get; set; }
 
+
         [DataMember]
         public string Firstname { get; set; }
 

@@ -16,6 +16,14 @@ namespace LoginProject.Interface
 
         [OperationContract]
         bool IsAlive();
+        [OperationContract]
+        int CountActiveUsers();
+
+        [OperationContract]
+        int CountFlaggedUsers();
+
+        [OperationContract]
+        int CountBlockedUsers();
 
         [OperationContract]
         ReturnUser CreateUser(NewUser NewUser);

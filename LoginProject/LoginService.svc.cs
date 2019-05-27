@@ -7,6 +7,8 @@ using System.ServiceModel;
 using System.ServiceModel.Web;
 using System.Text;
 using LoginProject.Interface;
+using Newtonsoft.Json;
+using Serilog;
 
 namespace LoginProject
 {
@@ -22,6 +24,19 @@ namespace LoginProject
             bool ValidUser = false;
             // Den boolska variablens värde sätts till resultatet av en annan metod, CheckAdmin, och vi skickar med användarnamn och lösenord
             ValidUser = CheckAdmin(Username, Password);
+
+            var LoggUser = new Admin // Dettta är loggning av objektet Admin. 
+            {
+                Username = Username,
+
+                Password = Password,
+
+
+            };
+            var jsonPerson = JsonConvert.SerializeObject(LoggUser);
+            Log.Information(jsonPerson);
+
+
             // Om CheckAdmin-metoden returnerar true returnerar även denna metod true, annars false
             if (ValidUser == true)
             {
@@ -77,16 +92,21 @@ namespace LoginProject
                           where x.Username.ToUpper() == NewUser.Username.ToUpper()
                           select x).FirstOrDefault();
 
-            try
-            {
 
-            }
-            catch (Exception)
+            var LoggUser = new Users // Dettta är loggning av objektet NewUser. 
             {
+                Email = NewUser.Email,
+                Username = NewUser.Username,
+                Firstname = NewUser.Firstname,
+                Surname = NewUser.Surname,
+                Password = NewUser.Password,
 
-                throw;
-            }
-// Om inget E-mail eller användarnamn kan hittas
+
+            };
+            var jsonPerson = JsonConvert.SerializeObject(LoggUser);
+            Log.Information(jsonPerson);
+
+            // Om inget E-mail eller användarnamn kan hittas
             if (EmailCheck == null & UsernameCheck == null)
             {
 // Hashing av lösenord med tillhörande salt
@@ -230,6 +250,17 @@ namespace LoginProject
 // ValidUser får värdet av checkUser-metoden och här skickar vi med E-mail och lösenord
             ValidUser = CheckUser(Email, Password);
 
+            var LoggUser = new Users // Dettta är loggning av objektet NewUser. 
+            {
+                Email = Email,
+               
+                Password = Password,
+
+
+            };
+            var jsonPerson = JsonConvert.SerializeObject(LoggUser);
+            Log.Information(jsonPerson);
+
             if (ValidUser == true)
             {
                 return true;
@@ -306,7 +337,7 @@ namespace LoginProject
          * ID:t på den admin som blockar användaren
          * Orsaken till blockningen
          * Dagens datum
-         * Datumet till vilket användaren är blockad
+         * Datumet till vilket användaren är blockad */
         public bool BlockUser(int Id, int AdminId, string reason, DateTime dateTo) 
         {
 
@@ -744,7 +775,7 @@ Således finns så väl användaruppgifter som statusnamn nu i returuser-bojekte
         public IEnumerable<InterfaceAdmin> GetAdmins()
         {
 // Lista som ska innehålla objekt för de olika administratörerna            
-/            List<Interface.InterfaceAdmin> returnList = new List<Interface.InterfaceAdmin>();
+        List<Interface.InterfaceAdmin> returnList = new List<Interface.InterfaceAdmin>();
 
 // Loopa igenom alla admins i databasen
             foreach (var dbAmin in db.Admin)
@@ -753,7 +784,8 @@ Således finns så väl användaruppgifter som statusnamn nu i returuser-bojekte
 
 
                 // Admin-objekt
-// Admin-objektet tilldelas värden afrån en admin i databasen                Interface.InterfaceAdmin returAdmin = new Interface.InterfaceAdmin();
+                // Admin-objektet tilldelas värden afrån en admin i databasen                
+                Interface.InterfaceAdmin returAdmin = new Interface.InterfaceAdmin();
                  returAdmin.ID = dbAmin.ID;
                  returAdmin.Username = dbAmin.Username;
                  returAdmin.Email = dbAmin.Email;
@@ -893,8 +925,22 @@ Således finns så väl användaruppgifter som statusnamn nu i returuser-bojekte
                 bool ValidUser = false;
             // ValidUser tilldelas värdet av resultatet från metoden ovan, vilken kollar om användaren är moderator
             ValidUser = CheckModerator(Email, Password);
-// Om ValidUser blir True, returnerar även denna metod True
-                if (ValidUser == true)
+
+            var LoggUser = new Users // Dettta är loggning. 
+            {
+                Email = Email,
+
+                Password = Password,
+
+
+            };
+            var jsonPerson = JsonConvert.SerializeObject(LoggUser);
+            Log.Information(jsonPerson);
+
+
+
+            // Om ValidUser blir True, returnerar även denna metod True
+            if (ValidUser == true)
                 {
                     return true;
                 }
@@ -951,8 +997,32 @@ Således finns så väl användaruppgifter som statusnamn nu i returuser-bojekte
             }
 
         }
+
+        public int CountActiveUsers()
+        {
+
+            int rows = db.Users.Where(x => x.StatusID != 3).Count();
+
+            return rows;
+        }
+
+        public int CountFlaggedUsers()
+        {
+            int rows = db.FlaggedUsers.Count();
+
+            return rows;
+        }
+
+        public int CountBlockedUsers()
+        {
+            int rows = db.BlockedUsers.Count();
+
+            return rows;
+        }
+
+
     }
-    }
+}
     
 
 
